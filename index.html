@@ -1,0 +1,719 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width,initial-scale=1.0"/>
+<title>Rupanco — Territorio Vivo</title>
+<link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,400;0,600;0,700;1,400;1,600&family=DM+Sans:wght@300;400;500&display=swap" rel="stylesheet"/>
+<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"/>
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+<style>
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+:root{
+  --bosque:#1A3D2B;
+  --bosque-mid:#2A5C40;
+  --bosque-cl:#E6F0EA;
+  --lago:#1B4D6B;
+  --lago-cl:#E0EEF5;
+  --tierra:#7A4E2D;
+  --tierra-cl:#F5EDE4;
+  --arena:#F7F3EC;
+  --crema:#FDFCF8;
+  --texto:#1C1A17;
+  --muted:#6B6560;
+  --borde:#DDD8CE;
+  --acento:#C8A850;
+  --r:10px;
+}
+html{scroll-behavior:smooth}
+body{font-family:'DM Sans',sans-serif;background:var(--crema);color:var(--texto);line-height:1.65;font-weight:300}
+
+/* ── NAV ── */
+nav{
+  position:sticky;top:0;z-index:900;
+  background:rgba(26,61,43,0.97);
+  backdrop-filter:blur(8px);
+  display:flex;align-items:center;justify-content:space-between;
+  padding:0 3rem;height:64px;
+}
+.nav-brand{display:flex;align-items:center;gap:0.75rem}
+.nav-dot{width:10px;height:10px;border-radius:50%;background:var(--acento)}
+.nav-logo{font-family:'Cormorant Garamond',serif;font-size:1.25rem;font-weight:600;color:#fff;letter-spacing:0.05em}
+.nav-logo span{color:var(--acento)}
+nav ul{list-style:none;display:flex;gap:2rem}
+nav ul a{color:rgba(255,255,255,0.75);text-decoration:none;font-size:0.82rem;font-weight:400;letter-spacing:0.04em;text-transform:uppercase;transition:color 0.2s}
+nav ul a:hover{color:#fff}
+.nav-cta{
+  background:var(--acento);color:var(--bosque);
+  padding:0.45rem 1.2rem;border-radius:100px;
+  font-size:0.8rem;font-weight:500;text-decoration:none;
+  transition:opacity 0.2s;letter-spacing:0.02em;
+}
+.nav-cta:hover{opacity:0.85}
+
+/* ── HERO ── */
+.hero{
+  min-height:92vh;
+  background:linear-gradient(170deg,var(--bosque) 0%,#14303F 100%);
+  display:grid;grid-template-columns:1fr 1fr;align-items:center;
+  padding:6rem 3rem 4rem;gap:4rem;
+  position:relative;overflow:hidden;
+}
+.hero::before{
+  content:'';position:absolute;inset:0;
+  background:radial-gradient(ellipse 80% 60% at 60% 50%,rgba(27,77,107,0.35) 0%,transparent 70%);
+}
+.hero-text{position:relative;z-index:2}
+.hero-eyebrow{
+  display:inline-flex;align-items:center;gap:0.5rem;
+  background:rgba(200,168,80,0.15);border:1px solid rgba(200,168,80,0.3);
+  color:var(--acento);font-size:0.75rem;font-weight:500;
+  letter-spacing:0.1em;text-transform:uppercase;
+  padding:0.35rem 0.9rem;border-radius:100px;margin-bottom:1.5rem;
+}
+.hero-eyebrow::before{content:'';width:6px;height:6px;border-radius:50%;background:var(--acento)}
+.hero h1{
+  font-family:'Cormorant Garamond',serif;
+  font-size:clamp(3rem,5.5vw,5rem);
+  font-weight:700;line-height:1.05;
+  color:#fff;margin-bottom:0.5rem;
+}
+.hero h1 em{color:var(--acento);font-style:italic}
+.hero-sub{
+  font-size:1.05rem;color:rgba(255,255,255,0.65);
+  max-width:460px;margin:1.25rem 0 2.5rem;font-weight:300;line-height:1.7;
+}
+.hero-actions{display:flex;gap:1rem;flex-wrap:wrap}
+.btn{
+  padding:0.75rem 1.75rem;border-radius:100px;
+  font-family:'DM Sans',sans-serif;font-size:0.88rem;font-weight:500;
+  cursor:pointer;text-decoration:none;border:none;
+  transition:transform 0.15s,opacity 0.15s;display:inline-block;
+}
+.btn:hover{transform:translateY(-2px)}
+.btn-gold{background:var(--acento);color:var(--bosque)}
+.btn-ghost{background:transparent;color:#fff;border:1px solid rgba(255,255,255,0.35)}
+.btn-ghost:hover{border-color:rgba(255,255,255,0.7)}
+
+.hero-stats{
+  position:relative;z-index:2;
+  display:grid;grid-template-columns:1fr 1fr;gap:1px;
+  background:rgba(255,255,255,0.08);border-radius:var(--r);overflow:hidden;
+  border:1px solid rgba(255,255,255,0.1);
+}
+.stat-cell{
+  background:rgba(255,255,255,0.04);
+  padding:1.75rem 1.5rem;
+}
+.stat-cell:hover{background:rgba(255,255,255,0.07);cursor:default}
+.stat-num{
+  font-family:'Cormorant Garamond',serif;
+  font-size:2.6rem;font-weight:700;color:#fff;line-height:1;
+  margin-bottom:0.3rem;
+}
+.stat-num span{font-size:1.6rem;color:var(--acento)}
+.stat-label{font-size:0.78rem;color:rgba(255,255,255,0.5);letter-spacing:0.04em;text-transform:uppercase}
+.stat-delta{
+  display:inline-block;margin-top:0.5rem;
+  font-size:0.72rem;background:rgba(200,168,80,0.15);
+  color:var(--acento);padding:2px 8px;border-radius:100px;
+}
+
+/* ── SECCIONES BASE ── */
+.section{padding:5rem 3rem;max-width:1200px;margin:0 auto}
+.section-full{padding:5rem 3rem;background:var(--arena)}
+.section-full > .section{padding:0}
+.eyebrow{
+  font-size:0.72rem;font-weight:500;letter-spacing:0.12em;text-transform:uppercase;
+  color:var(--bosque-mid);margin-bottom:0.75rem;
+  display:flex;align-items:center;gap:0.5rem;
+}
+.eyebrow::before{content:'';width:28px;height:1.5px;background:var(--acento)}
+h2.title{
+  font-family:'Cormorant Garamond',serif;
+  font-size:clamp(2rem,3.5vw,3rem);
+  font-weight:700;line-height:1.1;
+  color:var(--bosque);margin-bottom:1rem;
+}
+h2.title em{font-style:italic;color:var(--tierra)}
+.lead{font-size:1rem;color:var(--muted);max-width:560px;line-height:1.75}
+
+/* ── OPORTUNIDADES DE INVERSIÓN ── */
+.opp-grid{
+  display:grid;grid-template-columns:repeat(auto-fit,minmax(300px,1fr));
+  gap:1.5px;background:var(--borde);
+  border:1px solid var(--borde);border-radius:var(--r);overflow:hidden;
+  margin-top:3rem;
+}
+.opp-card{
+  background:var(--crema);padding:2rem 1.75rem;
+  transition:background 0.2s;cursor:pointer;
+  display:flex;flex-direction:column;gap:1rem;
+}
+.opp-card:hover{background:#fff}
+.opp-tag{
+  display:inline-block;font-size:0.7rem;font-weight:500;letter-spacing:0.08em;
+  text-transform:uppercase;padding:3px 10px;border-radius:100px;
+}
+.tag-eco{background:var(--bosque-cl);color:var(--bosque)}
+.tag-tur{background:var(--lago-cl);color:var(--lago)}
+.tag-agr{background:var(--tierra-cl);color:var(--tierra)}
+.tag-ene{background:#F0EDD8;color:#6B5A1A}
+.opp-card h3{
+  font-family:'Cormorant Garamond',serif;
+  font-size:1.4rem;font-weight:600;color:var(--bosque);line-height:1.2;
+}
+.opp-card p{font-size:0.88rem;color:var(--muted);line-height:1.65}
+.opp-meta{
+  margin-top:auto;padding-top:1rem;border-top:1px solid var(--borde);
+  display:flex;justify-content:space-between;align-items:center;
+}
+.opp-meta-val{font-size:0.82rem;color:var(--texto)}
+.opp-meta-val strong{
+  display:block;font-family:'Cormorant Garamond',serif;
+  font-size:1.3rem;font-weight:600;color:var(--bosque);
+}
+.opp-arrow{
+  width:36px;height:36px;border-radius:50%;
+  border:1px solid var(--borde);
+  display:flex;align-items:center;justify-content:center;
+  font-size:1rem;color:var(--muted);transition:all 0.2s;
+}
+.opp-card:hover .opp-arrow{background:var(--bosque);color:#fff;border-color:var(--bosque)}
+
+/* ── INDICADORES ── */
+.ind-layout{display:grid;grid-template-columns:1fr 2fr;gap:3rem;align-items:start;margin-top:3rem}
+.ind-tabs{display:flex;flex-direction:column;gap:0.5rem}
+.ind-tab{
+  padding:0.85rem 1.2rem;border-radius:var(--r);cursor:pointer;
+  font-size:0.88rem;color:var(--muted);border:1px solid transparent;
+  transition:all 0.2s;display:flex;align-items:center;gap:0.75rem;
+}
+.ind-tab.active{background:#fff;border-color:var(--borde);color:var(--bosque);font-weight:500}
+.ind-tab:hover:not(.active){background:rgba(0,0,0,0.03)}
+.ind-tab .tab-dot{width:8px;height:8px;border-radius:50%;flex-shrink:0}
+.ind-panel{display:none}
+.ind-panel.active{display:block}
+.ind-cards{display:grid;grid-template-columns:repeat(3,1fr);gap:1rem;margin-bottom:1.5rem}
+.ind-card{
+  background:#fff;border:1px solid var(--borde);border-radius:var(--r);
+  padding:1.25rem;
+}
+.ind-card-label{font-size:0.72rem;color:var(--muted);letter-spacing:0.04em;text-transform:uppercase;margin-bottom:0.5rem}
+.ind-card-val{
+  font-family:'Cormorant Garamond',serif;
+  font-size:2rem;font-weight:700;color:var(--bosque);line-height:1;
+}
+.ind-card-unit{font-size:0.85rem;font-weight:400;color:var(--muted)}
+.ind-card-trend{font-size:0.75rem;margin-top:0.4rem;color:var(--bosque-mid)}
+.ind-chart{
+  background:#fff;border:1px solid var(--borde);border-radius:var(--r);
+  padding:1.5rem;
+}
+.ind-chart-title{font-size:0.82rem;font-weight:500;color:var(--muted);margin-bottom:1rem;text-transform:uppercase;letter-spacing:0.05em}
+.bars{display:flex;align-items:flex-end;gap:6px;height:120px}
+.bar-wrap{flex:1;display:flex;flex-direction:column;align-items:center;gap:4px}
+.bar{
+  width:100%;border-radius:4px 4px 0 0;
+  transition:height 0.4s ease;
+}
+.bar-label{font-size:0.65rem;color:var(--muted);white-space:nowrap}
+.bar-val{font-size:0.7rem;color:var(--bosque);font-weight:500}
+
+/* ── MAPA ── */
+#map{height:500px;border-radius:var(--r);border:1px solid var(--borde)}
+.map-wrap{position:relative;margin-top:3rem}
+.map-legend{
+  display:flex;gap:1.5rem;flex-wrap:wrap;
+  margin-top:1rem;font-size:0.8rem;color:var(--muted);
+}
+.map-legend span{display:flex;align-items:center;gap:0.4rem}
+.ldot{width:10px;height:10px;border-radius:50%;flex-shrink:0}
+
+/* ── PROYECTOS / CROWDFUNDING ── */
+.cf-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(280px,1fr));gap:1.5rem;margin-top:3rem}
+.cf-card{
+  background:#fff;border:1px solid var(--borde);border-radius:var(--r);
+  overflow:hidden;transition:transform 0.2s,box-shadow 0.2s;
+}
+.cf-card:hover{transform:translateY(-4px);box-shadow:0 12px 32px rgba(0,0,0,0.08)}
+.cf-img{
+  height:160px;
+  display:flex;align-items:center;justify-content:center;
+  font-size:3rem;
+}
+.cf-body{padding:1.25rem}
+.cf-body h3{
+  font-family:'Cormorant Garamond',serif;
+  font-size:1.2rem;font-weight:600;color:var(--bosque);
+  margin-bottom:0.4rem;line-height:1.2;
+}
+.cf-body p{font-size:0.84rem;color:var(--muted);margin-bottom:1rem;line-height:1.6}
+.cf-progress{height:5px;background:var(--bosque-cl);border-radius:100px;margin-bottom:0.5rem;overflow:hidden}
+.cf-bar{height:100%;background:var(--bosque-mid);border-radius:100px;transition:width 0.6s ease}
+.cf-meta{display:flex;justify-content:space-between;font-size:0.75rem;color:var(--muted)}
+.cf-meta strong{color:var(--bosque)}
+
+/* ── VITRINA ── */
+.vitrina-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:1rem;margin-top:3rem}
+.prod-card{
+  background:#fff;border:1px solid var(--borde);border-radius:var(--r);
+  padding:1.25rem;text-align:center;
+  transition:box-shadow 0.2s,transform 0.2s;cursor:pointer;
+}
+.prod-card:hover{box-shadow:0 8px 24px rgba(0,0,0,0.07);transform:translateY(-2px)}
+.prod-emoji{font-size:2.5rem;margin-bottom:0.75rem;display:block}
+.prod-card h4{font-size:0.92rem;font-weight:500;color:var(--bosque);margin-bottom:0.2rem}
+.prod-card p{font-size:0.78rem;color:var(--muted)}
+.prod-badge{
+  display:inline-block;margin-top:0.6rem;
+  font-size:0.7rem;background:var(--bosque-cl);color:var(--bosque);
+  padding:2px 8px;border-radius:100px;font-weight:500;
+}
+
+/* ── CTA INVERSIÓN ── */
+.cta-inversion{
+  background:linear-gradient(135deg,var(--bosque) 0%,#14303F 100%);
+  border-radius:16px;padding:4rem 3rem;
+  display:grid;grid-template-columns:1fr auto;gap:3rem;align-items:center;
+  margin-top:4rem;
+}
+.cta-inversion h2{
+  font-family:'Cormorant Garamond',serif;
+  font-size:clamp(1.8rem,3vw,2.6rem);font-weight:700;
+  color:#fff;line-height:1.15;margin-bottom:0.75rem;
+}
+.cta-inversion h2 em{color:var(--acento);font-style:italic}
+.cta-inversion p{color:rgba(255,255,255,0.6);font-size:0.92rem;max-width:480px}
+.cta-btns{display:flex;flex-direction:column;gap:0.75rem;flex-shrink:0}
+
+/* ── FOOTER ── */
+footer{
+  background:var(--bosque);color:rgba(255,255,255,0.5);
+  padding:3rem;display:grid;grid-template-columns:2fr 1fr 1fr;gap:3rem;
+}
+.footer-brand{font-family:'Cormorant Garamond',serif;font-size:1.4rem;font-weight:600;color:#fff;margin-bottom:0.5rem}
+.footer-brand span{color:var(--acento)}
+footer p{font-size:0.82rem;line-height:1.7}
+.footer-col h4{font-size:0.72rem;letter-spacing:0.1em;text-transform:uppercase;color:rgba(255,255,255,0.4);margin-bottom:0.75rem}
+.footer-col a{display:block;color:rgba(255,255,255,0.55);text-decoration:none;font-size:0.82rem;margin-bottom:0.4rem;transition:color 0.2s}
+.footer-col a:hover{color:#fff}
+.footer-bottom{
+  background:rgba(0,0,0,0.2);text-align:center;
+  padding:1rem 3rem;font-size:0.75rem;color:rgba(255,255,255,0.3);
+}
+
+@media(max-width:768px){
+  nav ul{display:none}.hero{grid-template-columns:1fr;padding:5rem 1.5rem 3rem}
+  .hero-stats{grid-template-columns:1fr 1fr}.section{padding:3rem 1.5rem}
+  .ind-layout{grid-template-columns:1fr}.ind-cards{grid-template-columns:1fr 1fr}
+  .cta-inversion{grid-template-columns:1fr}.footer{grid-template-columns:1fr}
+  .section-full{padding:3rem 1.5rem}
+}
+</style>
+</head>
+<body>
+
+<!-- NAV -->
+<nav>
+  <div class="nav-brand">
+    <div class="nav-dot"></div>
+    <div class="nav-logo">Rupanco <span>·</span> Territorio Vivo</div>
+  </div>
+  <ul>
+    <li><a href="#oportunidades">Invertir</a></li>
+    <li><a href="#indicadores">Indicadores</a></li>
+    <li><a href="#proyectos">Proyectos</a></li>
+    <li><a href="#vitrina">Vitrina</a></li>
+    <li><a href="#mapa">Territorio</a></li>
+  </ul>
+  <a href="#contacto" class="nav-cta">Contactar</a>
+</nav>
+
+<!-- HERO -->
+<div class="hero">
+  <div class="hero-text">
+    <div class="hero-eyebrow">Lago Rupanco · Región de Los Lagos · Chile</div>
+    <h1>Un territorio <em>vivo</em> para invertir y crecer</h1>
+    <p class="hero-sub">Datos territoriales, oportunidades de inversión y proyectos locales en un solo lugar. Para emprendedores, municipios, turistas e inversionistas.</p>
+    <div class="hero-actions">
+      <a href="#oportunidades" class="btn btn-gold">Ver oportunidades →</a>
+      <a href="#proyectos" class="btn btn-ghost">Proyectos activos</a>
+    </div>
+  </div>
+  <div class="hero-stats">
+    <div class="stat-cell">
+      <div class="stat-num">23<span>k</span></div>
+      <div class="stat-label">Hectáreas productivas</div>
+      <div class="stat-delta">↑ 4.2% anual</div>
+    </div>
+    <div class="stat-cell">
+      <div class="stat-num">4<span>°</span></div>
+      <div class="stat-label">Destino eco-turístico región</div>
+      <div class="stat-delta">↑ 2 posiciones</div>
+    </div>
+    <div class="stat-cell">
+      <div class="stat-num">12<span>k</span></div>
+      <div class="stat-label">Habitantes permanentes</div>
+      <div class="stat-delta">Estable</div>
+    </div>
+    <div class="stat-cell">
+      <div class="stat-num">87<span>%</span></div>
+      <div class="stat-label">Cobertura vegetal nativa</div>
+      <div class="stat-delta">↑ conservada</div>
+    </div>
+  </div>
+</div>
+
+<!-- OPORTUNIDADES DE INVERSIÓN -->
+<section id="oportunidades" class="section">
+  <div class="eyebrow">Oportunidades</div>
+  <h2 class="title">¿Dónde <em>invertir</em> en Rupanco?</h2>
+  <p class="lead">Sectores con potencial de crecimiento identificados por el equipo Colab Rupanco junto a datos del territorio.</p>
+  <div class="opp-grid">
+    <div class="opp-card">
+      <span class="opp-tag tag-tur">Turismo</span>
+      <h3>Ecoturismo y turismo de naturaleza</h3>
+      <p>El lago Rupanco figura entre los menos intervenidos de Chile. Alta demanda de alojamientos sustentables, experiencias de avistamiento y turismo científico.</p>
+      <div class="opp-meta">
+        <div class="opp-meta-val"><span>Inversión mínima est.</span><strong>UF 500</strong></div>
+        <div class="opp-meta-val"><span>Retorno proyectado</span><strong>12–18%</strong></div>
+        <div class="opp-arrow">→</div>
+      </div>
+    </div>
+    <div class="opp-card">
+      <span class="opp-tag tag-agr">Agroalimentario</span>
+      <h3>Producción agroalimentaria limpia</h3>
+      <p>Suelos volcánicos de alta calidad. Oportunidad en productos gourmet, ganadería sustentable y economía circular agrícola con certificación de origen.</p>
+      <div class="opp-meta">
+        <div class="opp-meta-val"><span>Inversión mínima est.</span><strong>UF 300</strong></div>
+        <div class="opp-meta-val"><span>Retorno proyectado</span><strong>9–14%</strong></div>
+        <div class="opp-arrow">→</div>
+      </div>
+    </div>
+    <div class="opp-card">
+      <span class="opp-tag tag-eco">Economía verde</span>
+      <h3>Servicios ambientales y carbono</h3>
+      <p>Bosques nativos con potencial para mercados voluntarios de carbono. Corredores biológicos y restauración ecológica como inversión de largo plazo.</p>
+      <div class="opp-meta">
+        <div class="opp-meta-val"><span>Potencial carbono</span><strong>Alto</strong></div>
+        <div class="opp-meta-val"><span>Horizonte</span><strong>10–20 años</strong></div>
+        <div class="opp-arrow">→</div>
+      </div>
+    </div>
+    <div class="opp-card">
+      <span class="opp-tag tag-ene">Energía</span>
+      <h3>Energías renovables distribuidas</h3>
+      <p>Recurso hídrico y solar disponible. Proyectos de micro-hidro y solar para comunidades rurales y uso productivo descarbonizado.</p>
+      <div class="opp-meta">
+        <div class="opp-meta-val"><span>Inversión mínima est.</span><strong>UF 800</strong></div>
+        <div class="opp-meta-val"><span>Retorno proyectado</span><strong>8–12%</strong></div>
+        <div class="opp-arrow">→</div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- INDICADORES -->
+<div class="section-full" id="indicadores">
+  <div class="section">
+    <div class="eyebrow">Dashboard territorial</div>
+    <h2 class="title">Indicadores del <em>territorio</em></h2>
+    <p class="lead">Datos actualizados periódicamente por el equipo Colab Rupanco para apoyar la toma de decisiones.</p>
+    <div class="ind-layout">
+      <div class="ind-tabs">
+        <div class="ind-tab active" onclick="showPanel('eco',this)">
+          <span class="tab-dot" style="background:var(--tierra)"></span>Económicos
+        </div>
+        <div class="ind-tab" onclick="showPanel('amb',this)">
+          <span class="tab-dot" style="background:var(--bosque-mid)"></span>Ambientales
+        </div>
+        <div class="ind-tab" onclick="showPanel('soc',this)">
+          <span class="tab-dot" style="background:var(--lago)"></span>Sociales
+        </div>
+      </div>
+      <div>
+        <!-- ECO -->
+        <div class="ind-panel active" id="panel-eco">
+          <div class="ind-cards">
+            <div class="ind-card">
+              <div class="ind-card-label">Empleo local</div>
+              <div class="ind-card-val">1.840 <span class="ind-card-unit">personas</span></div>
+              <div class="ind-card-trend">↑ +3.1% vs año anterior</div>
+            </div>
+            <div class="ind-card">
+              <div class="ind-card-label">Turistas anuales</div>
+              <div class="ind-card-val">48<span class="ind-card-unit">k</span></div>
+              <div class="ind-card-trend">↑ +12% temporada alta</div>
+            </div>
+            <div class="ind-card">
+              <div class="ind-card-label">Empresas activas</div>
+              <div class="ind-card-val">312</div>
+              <div class="ind-card-trend">↑ +18 nuevas 2024</div>
+            </div>
+          </div>
+          <div class="ind-chart">
+            <div class="ind-chart-title">Turistas por temporada (miles)</div>
+            <div class="bars" id="bars-eco"></div>
+          </div>
+        </div>
+        <!-- AMB -->
+        <div class="ind-panel" id="panel-amb">
+          <div class="ind-cards">
+            <div class="ind-card">
+              <div class="ind-card-label">Calidad del agua</div>
+              <div class="ind-card-val">A+ <span class="ind-card-unit">índice</span></div>
+              <div class="ind-card-trend">Óptima — 6 estaciones</div>
+            </div>
+            <div class="ind-card">
+              <div class="ind-card-label">Bosque nativo</div>
+              <div class="ind-card-val">87<span class="ind-card-unit">%</span></div>
+              <div class="ind-card-trend">Cobertura conservada</div>
+            </div>
+            <div class="ind-card">
+              <div class="ind-card-label">Carbono captado</div>
+              <div class="ind-card-val">14<span class="ind-card-unit">k ton</span></div>
+              <div class="ind-card-trend">Est. anual bosques nativos</div>
+            </div>
+          </div>
+          <div class="ind-chart">
+            <div class="ind-chart-title">Índice calidad del agua por estación</div>
+            <div class="bars" id="bars-amb"></div>
+          </div>
+        </div>
+        <!-- SOC -->
+        <div class="ind-panel" id="panel-soc">
+          <div class="ind-cards">
+            <div class="ind-card">
+              <div class="ind-card-label">Población</div>
+              <div class="ind-card-val">12.4<span class="ind-card-unit">k</span></div>
+              <div class="ind-card-trend">Estable — dato Censo 2024</div>
+            </div>
+            <div class="ind-card">
+              <div class="ind-card-label">Cobertura salud</div>
+              <div class="ind-card-val">78<span class="ind-card-unit">%</span></div>
+              <div class="ind-card-trend">↑ +5% vs 2022</div>
+            </div>
+            <div class="ind-card">
+              <div class="ind-card-label">Acceso a internet</div>
+              <div class="ind-card-val">61<span class="ind-card-unit">%</span></div>
+              <div class="ind-card-trend">En expansión — fibra óptica</div>
+            </div>
+          </div>
+          <div class="ind-chart">
+            <div class="ind-chart-title">Cobertura de servicios básicos (%)</div>
+            <div class="bars" id="bars-soc"></div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- PROYECTOS CROWDFUNDING -->
+<section id="proyectos" class="section">
+  <div class="eyebrow">Proyectos activos</div>
+  <h2 class="title">Apoya el <em>desarrollo local</em></h2>
+  <p class="lead">Proyectos de emprendedores locales que buscan financiamiento colectivo y apoyo comunitario.</p>
+  <div class="cf-grid">
+    <div class="cf-card">
+      <div class="cf-img" style="background:#E6F0EA">🏕️</div>
+      <div class="cf-body">
+        <h3>Camping sustentable Orilla Norte</h3>
+        <p>5 sitios de camping con energía solar, baños secos y sendero autoguiado. Acceso directo al lago.</p>
+        <div class="cf-progress"><div class="cf-bar" style="width:68%"></div></div>
+        <div class="cf-meta"><span><strong>$3.4M</strong> recaudados</span><span><strong>68%</strong> · 22 días</span></div>
+      </div>
+    </div>
+    <div class="cf-card">
+      <div class="cf-img" style="background:#F5EDE4">🧀</div>
+      <div class="cf-body">
+        <h3>Quesos artesanales Rupanco DOP</h3>
+        <p>Ampliación de infraestructura para certificación de Denominación de Origen y exportación a mercados gourmet.</p>
+        <div class="cf-progress"><div class="cf-bar" style="width:41%"></div></div>
+        <div class="cf-meta"><span><strong>$2.05M</strong> recaudados</span><span><strong>41%</strong> · 35 días</span></div>
+      </div>
+    </div>
+    <div class="cf-card">
+      <div class="cf-img" style="background:#E0EEF5">🚣</div>
+      <div class="cf-body">
+        <h3>Kayak y tours lacustres</h3>
+        <p>Flotilla de kayaks y guías certificados para turismo de aventura en el lago. Incluye programa educativo para escuelas.</p>
+        <div class="cf-progress"><div class="cf-bar" style="width:85%"></div></div>
+        <div class="cf-meta"><span><strong>$4.25M</strong> recaudados</span><span><strong>85%</strong> · 8 días</span></div>
+      </div>
+    </div>
+  </div>
+  <div style="text-align:center;margin-top:2rem">
+    <a href="#" class="btn btn-gold">Ver todos los proyectos →</a>
+  </div>
+</section>
+
+<!-- VITRINA DE PRODUCTOS -->
+<div class="section-full" id="vitrina">
+  <div class="section">
+    <div class="eyebrow">Vitrina local</div>
+    <h2 class="title">Productos y servicios del <em>territorio</em></h2>
+    <p class="lead">Emprendimientos locales con identidad Rupanco. Conoce, compra y conecta directamente con productores.</p>
+    <div class="vitrina-grid">
+      <div class="prod-card">
+        <span class="prod-emoji">🍯</span>
+        <h4>Miel de ulmo nativa</h4>
+        <p>Apicultura sustentable, cosecha artesanal</p>
+        <span class="prod-badge">Gastronomía</span>
+      </div>
+      <div class="prod-card">
+        <span class="prod-emoji">🎣</span>
+        <h4>Pesca artesanal lacustre</h4>
+        <p>Trucha y salmón del lago, fresco y ahumado</p>
+        <span class="prod-badge">Alimentos</span>
+      </div>
+      <div class="prod-card">
+        <span class="prod-emoji">🌿</span>
+        <h4>Hierbas medicinales</h4>
+        <p>Recolección con comunidades mapuche</p>
+        <span class="prod-badge">Bienestar</span>
+      </div>
+      <div class="prod-card">
+        <span class="prod-emoji">🏡</span>
+        <h4>Cabañas y alojamiento</h4>
+        <p>Alojamiento rural con vista al lago</p>
+        <span class="prod-badge">Turismo</span>
+      </div>
+      <div class="prod-card">
+        <span class="prod-emoji">🪵</span>
+        <h4>Artesanía en madera nativa</h4>
+        <p>Tallado en lenga y coihue certificado</p>
+        <span class="prod-badge">Artesanía</span>
+      </div>
+      <div class="prod-card">
+        <span class="prod-emoji">🌾</span>
+        <h4>Cereales y semillas nativas</h4>
+        <p>Producción agroecológica sin agroquímicos</p>
+        <span class="prod-badge">Agroalimentario</span>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- MAPA TERRITORIAL -->
+<section id="mapa" class="section">
+  <div class="eyebrow">Territorio</div>
+  <h2 class="title">Conoce el <em>lago Rupanco</em></h2>
+  <p class="lead">Ubicación de oportunidades de inversión, emprendimientos activos y zonas de interés territorial.</p>
+  <div class="map-wrap">
+    <div id="map"></div>
+    <div class="map-legend">
+      <span><span class="ldot" style="background:#1A3D2B"></span> Emprendimiento activo</span>
+      <span><span class="ldot" style="background:var(--acento)"></span> Oportunidad de inversión</span>
+      <span><span class="ldot" style="background:var(--lago)"></span> Punto de interés turístico</span>
+      <span><span class="ldot" style="background:var(--tierra)"></span> Zona productiva</span>
+    </div>
+  </div>
+</section>
+
+<!-- CTA INVERSIÓN -->
+<div style="padding:0 3rem 5rem;max-width:1200px;margin:0 auto" id="contacto">
+  <div class="cta-inversion">
+    <div>
+      <h2>¿Quieres <em>invertir</em> en Rupanco?</h2>
+      <p>El equipo Colab Rupanco conecta a inversionistas con oportunidades reales del territorio. Te acompañamos en el proceso.</p>
+    </div>
+    <div class="cta-btns">
+      <a href="mailto:contacto@colabrupanco.cl" class="btn btn-gold">Contactar al equipo</a>
+      <a href="#oportunidades" class="btn btn-ghost">Ver oportunidades</a>
+    </div>
+  </div>
+</div>
+
+<!-- FOOTER -->
+<footer>
+  <div>
+    <div class="footer-brand">Rupanco <span>·</span> Territorio Vivo</div>
+    <p>Plataforma de datos territoriales e inversión del lago Rupanco, impulsada por Colab Rupanco en colaboración con municipios y emprendedores locales.</p>
+  </div>
+  <div class="footer-col">
+    <h4>Plataforma</h4>
+    <a href="#oportunidades">Invertir</a>
+    <a href="#indicadores">Indicadores</a>
+    <a href="#proyectos">Proyectos</a>
+    <a href="#vitrina">Vitrina local</a>
+  </div>
+  <div class="footer-col">
+    <h4>Equipo</h4>
+    <a href="#">Colab Rupanco</a>
+    <a href="#">Municipio</a>
+    <a href="#">Contacto</a>
+    <a href="#">Postular proyecto</a>
+  </div>
+</footer>
+<div class="footer-bottom">© 2025 Colab Rupanco · Lago Rupanco, Región de Los Lagos, Chile</div>
+
+<script>
+/* ── INDICADORES TABS ── */
+function showPanel(id, el) {
+  document.querySelectorAll('.ind-panel').forEach(p => p.classList.remove('active'));
+  document.querySelectorAll('.ind-tab').forEach(t => t.classList.remove('active'));
+  document.getElementById('panel-' + id).classList.add('active');
+  el.classList.add('active');
+}
+
+/* ── BARRAS ── */
+function renderBars(containerId, data, color) {
+  const max = Math.max(...data.map(d => d.val));
+  const c = document.getElementById(containerId);
+  if (!c) return;
+  c.innerHTML = data.map(d => `
+    <div class="bar-wrap">
+      <div class="bar-val">${d.val}${d.unit||''}</div>
+      <div class="bar" style="height:${(d.val/max)*100}px;background:${color}"></div>
+      <div class="bar-label">${d.label}</div>
+    </div>`).join('');
+}
+renderBars('bars-eco', [
+  {label:'Ene',val:2.1,unit:'k'},{label:'Feb',val:8.4,unit:'k'},
+  {label:'Mar',val:6.2,unit:'k'},{label:'Abr',val:3.1,unit:'k'},
+  {label:'May',val:1.8,unit:'k'},{label:'Jun',val:1.2,unit:'k'},
+  {label:'Jul',val:2.4,unit:'k'},{label:'Ago',val:3.8,unit:'k'},
+  {label:'Sep',val:4.2,unit:'k'},{label:'Oct',val:5.6,unit:'k'},
+  {label:'Nov',val:6.8,unit:'k'},{label:'Dic',val:9.2,unit:'k'}
+], '#7A4E2D');
+renderBars('bars-amb', [
+  {label:'E1',val:96},{label:'E2',val:94},{label:'E3',val:98},
+  {label:'E4',val:91},{label:'E5',val:97},{label:'E6',val:95}
+], '#2A5C40');
+renderBars('bars-soc', [
+  {label:'Agua',val:95},{label:'Electricidad',val:88},{label:'Salud',val:78},
+  {label:'Internet',val:61},{label:'Alcantarillado',val:54}
+], '#1B4D6B');
+
+/* ── MAPA LEAFLET ── */
+const map = L.map('map').setView([-40.82, -72.45], 12);
+L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png',{
+  attribution:'© OpenStreetMap',maxZoom:18
+}).addTo(map);
+
+const pts = [
+  {lat:-40.79,lng:-72.43,tipo:'turismo',nombre:'Camping Orilla Norte',desc:'Proyecto crowdfunding activo — 68%'},
+  {lat:-40.81,lng:-72.50,tipo:'inversion',nombre:'Zona Ecoturismo Sur',desc:'Alta demanda alojamientos sustentables'},
+  {lat:-40.83,lng:-72.47,tipo:'turismo',nombre:'Embarcadero kayaks',desc:'Tours lacustres en desarrollo'},
+  {lat:-40.86,lng:-72.41,tipo:'productivo',nombre:'Predio ganadero certificado',desc:'Producción agroalimentaria limpia'},
+  {lat:-40.78,lng:-72.48,tipo:'emprendimiento',nombre:'Apicultura Rupanco',desc:'Miel de ulmo nativa — Vitrina activa'},
+  {lat:-40.84,lng:-72.53,tipo:'inversion',nombre:'Área micro-hidro',desc:'Energía renovable distribuida'},
+  {lat:-40.80,lng:-72.55,tipo:'productivo',nombre:'Zona cerealera nativa',desc:'Semillas y cereales agroecológicos'},
+  {lat:-40.77,lng:-72.44,tipo:'emprendimiento',nombre:'Quesería artesanal',desc:'Proyecto DOP en desarrollo — 41%'},
+];
+const cols = {
+  emprendimiento:'#1A3D2B', inversion:'#C8A850',
+  turismo:'#1B4D6B', productivo:'#7A4E2D'
+};
+pts.forEach(p => {
+  L.circleMarker([p.lat,p.lng],{
+    radius:9,fillColor:cols[p.tipo],color:'#fff',
+    weight:2,opacity:1,fillOpacity:0.9
+  }).addTo(map)
+  .bindPopup(`<strong style="font-size:13px">${p.nombre}</strong><br><span style="font-size:11px;color:#666">${p.desc}</span>`);
+});
+</script>
+</body>
+</html>
