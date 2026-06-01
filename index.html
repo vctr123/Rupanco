@@ -5,8 +5,8 @@
 <meta name="viewport" content="width=device-width,initial-scale=1.0"/>
 <title>Rupanco — Territorio Vivo</title>
 <link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,400;0,600;0,700;1,400;1,600&family=DM+Sans:wght@300;400;500&display=swap" rel="stylesheet"/>
-<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"/>
-<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+<link href="https://api.mapbox.com/mapbox-gl-js/v3.3.0/mapbox-gl.css" rel="stylesheet"/>
+<script src="https://api.mapbox.com/mapbox-gl-js/v3.3.0/mapbox-gl.js"></script>
 <style>
 *,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
 :root{
@@ -221,8 +221,20 @@ h2.title em{font-style:italic;color:var(--tierra)}
 .bar-val{font-size:0.7rem;color:var(--bosque);font-weight:500}
 
 /* ── MAPA ── */
-#map{height:500px;border-radius:var(--r);border:1px solid var(--borde)}
+#map{height:520px;border-radius:var(--r);border:1px solid var(--borde);overflow:hidden}
 .map-wrap{position:relative;margin-top:3rem}
+.mapboxgl-popup-content{font-family:'DM Sans',sans-serif;font-size:13px;border-radius:8px;padding:12px 14px;box-shadow:0 4px 16px rgba(0,0,0,0.12)}
+.mapboxgl-popup-content strong{color:#1A3D2B;display:block;margin-bottom:4px;font-size:14px}
+.mapboxgl-ctrl-bottom-right{display:none}
+.layer-toggle{display:flex;flex-wrap:wrap;gap:8px;margin-top:1rem}
+.layer-btn{
+  display:flex;align-items:center;gap:6px;
+  padding:5px 12px;border-radius:100px;border:1px solid var(--borde);
+  background:#fff;font-size:0.78rem;font-family:'DM Sans',sans-serif;
+  cursor:pointer;transition:all 0.2s;font-weight:400;color:var(--muted);
+}
+.layer-btn.active{color:#fff;border-color:transparent;font-weight:500}
+.layer-btn .ldot{width:9px;height:9px;border-radius:50%;flex-shrink:0}
 .map-legend{
   display:flex;gap:1.5rem;flex-wrap:wrap;
   margin-top:1rem;font-size:0.8rem;color:var(--muted);
@@ -600,14 +612,22 @@ footer p{font-size:0.82rem;line-height:1.7}
 <section id="mapa" class="section">
   <div class="eyebrow">Territorio</div>
   <h2 class="title">Conoce el <em>lago Rupanco</em></h2>
-  <p class="lead">Ubicación de oportunidades de inversión, emprendimientos activos y zonas de interés territorial.</p>
+  <p class="lead">Capas territoriales reales del área de estudio — geomorfología, red hidrográfica, ejes viales y edificación rural.</p>
   <div class="map-wrap">
     <div id="map"></div>
-    <div class="map-legend">
-      <span><span class="ldot" style="background:#1A3D2B"></span> Emprendimiento activo</span>
-      <span><span class="ldot" style="background:var(--acento)"></span> Oportunidad de inversión</span>
-      <span><span class="ldot" style="background:var(--lago)"></span> Punto de interés turístico</span>
-      <span><span class="ldot" style="background:var(--tierra)"></span> Zona productiva</span>
+    <div class="layer-toggle" id="layerToggle">
+      <button class="layer-btn active" data-layer="geomorfologia" style="--c:#7A4E2D" onclick="toggleLayer(this)">
+        <span class="ldot" style="background:#C8A850"></span> Geomorfología
+      </button>
+      <button class="layer-btn active" data-layer="hidrografia" style="--c:#1B4D6B" onclick="toggleLayer(this)">
+        <span class="ldot" style="background:#1B4D6B"></span> Red Hidrográfica
+      </button>
+      <button class="layer-btn active" data-layer="vial" style="--c:#1A3D2B" onclick="toggleLayer(this)">
+        <span class="ldot" style="background:#1A3D2B"></span> Ejes Viales
+      </button>
+      <button class="layer-btn active" data-layer="edificacion" style="--c:#E07B54" onclick="toggleLayer(this)">
+        <span class="ldot" style="background:#E07B54"></span> Edificación Rural
+      </button>
     </div>
   </div>
 </section>
@@ -687,32 +707,193 @@ renderBars('bars-soc', [
   {label:'Internet',val:61},{label:'Alcantarillado',val:54}
 ], '#1B4D6B');
 
-/* ── MAPA LEAFLET ── */
-const map = L.map('map').setView([-40.82, -72.45], 12);
-L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png',{
-  attribution:'© OpenStreetMap',maxZoom:18
-}).addTo(map);
+/* ── MAPA MAPBOX GL JS ── */
+mapboxgl.accessToken = 'pk.eyJ1IjoicnVwYW5jbyIsImEiOiJjbXB1aDlqNXgxdWFkMnFwdnR1MWl1NnU5In0.9j2anxtd26MwvSrQcReMLA';
 
-const pts = [
-  {lat:-40.79,lng:-72.43,tipo:'turismo',nombre:'Camping Orilla Norte',desc:'Proyecto crowdfunding activo — 68%'},
-  {lat:-40.81,lng:-72.50,tipo:'inversion',nombre:'Zona Ecoturismo Sur',desc:'Alta demanda alojamientos sustentables'},
-  {lat:-40.83,lng:-72.47,tipo:'turismo',nombre:'Embarcadero kayaks',desc:'Tours lacustres en desarrollo'},
-  {lat:-40.86,lng:-72.41,tipo:'productivo',nombre:'Predio ganadero certificado',desc:'Producción agroalimentaria limpia'},
-  {lat:-40.78,lng:-72.48,tipo:'emprendimiento',nombre:'Apicultura Rupanco',desc:'Miel de ulmo nativa — Vitrina activa'},
-  {lat:-40.84,lng:-72.53,tipo:'inversion',nombre:'Área micro-hidro',desc:'Energía renovable distribuida'},
-  {lat:-40.80,lng:-72.55,tipo:'productivo',nombre:'Zona cerealera nativa',desc:'Semillas y cereales agroecológicos'},
-  {lat:-40.77,lng:-72.44,tipo:'emprendimiento',nombre:'Quesería artesanal',desc:'Proyecto DOP en desarrollo — 41%'},
-];
-const cols = {
-  emprendimiento:'#1A3D2B', inversion:'#C8A850',
-  turismo:'#1B4D6B', productivo:'#7A4E2D'
+const map = new mapboxgl.Map({
+  container: 'map',
+  style: 'mapbox://styles/mapbox/outdoors-v12',
+  center: [-72.48, -40.82],
+  zoom: 11,
+  attributionControl: false
+});
+
+map.addControl(new mapboxgl.NavigationControl(), 'top-right');
+map.addControl(new mapboxgl.ScaleControl({ maxWidth: 120, unit: 'metric' }), 'bottom-left');
+
+// Base del repositorio GitHub para los GeoJSON
+const BASE = 'https://raw.githubusercontent.com/vctr123/Rupanco/main/';
+
+map.on('load', () => {
+
+  // ── 1. GEOMORFOLOGÍA (polígonos) ──────────────────────────────────────────
+  map.addSource('geomorfologia', {
+    type: 'geojson',
+    data: BASE + 'Geomorfolog%C3%ADa.geojson'
+  });
+  map.addLayer({
+    id: 'geomorfologia-fill',
+    type: 'fill',
+    source: 'geomorfologia',
+    paint: {
+      'fill-color': [
+        'match', ['get', 'UNIDAD'],
+        'Planicie', '#F5EDE4',
+        'Ladera', '#C8A850',
+        'Cumbres', '#7A4E2D',
+        'Depresión', '#E0EEF5',
+        'Valle', '#E6F0EA',
+        '#DDD8CE'
+      ],
+      'fill-opacity': 0.55
+    }
+  });
+  map.addLayer({
+    id: 'geomorfologia-line',
+    type: 'line',
+    source: 'geomorfologia',
+    paint: { 'line-color': '#7A4E2D', 'line-width': 0.6, 'line-opacity': 0.6 }
+  });
+
+  // ── 2. RED HIDROGRÁFICA (líneas) ──────────────────────────────────────────
+  map.addSource('hidrografia', {
+    type: 'geojson',
+    data: BASE + 'Red_Hidrogr%C3%A1fica.geojson'
+  });
+  map.addLayer({
+    id: 'hidrografia-line',
+    type: 'line',
+    source: 'hidrografia',
+    paint: {
+      'line-color': '#1B4D6B',
+      'line-width': ['interpolate', ['linear'], ['zoom'], 10, 1, 14, 2.5],
+      'line-opacity': 0.85
+    }
+  });
+
+  // ── 3. EJES VIALES (líneas) ────────────────────────────────────────────────
+  map.addSource('vial', {
+    type: 'geojson',
+    data: BASE + 'Eje_vial.geojson'
+  });
+  map.addLayer({
+    id: 'vial-line',
+    type: 'line',
+    source: 'vial',
+    paint: {
+      'line-color': '#1A3D2B',
+      'line-width': ['interpolate', ['linear'], ['zoom'], 10, 1.5, 14, 3],
+      'line-opacity': 0.9
+    }
+  });
+
+  // ── 4. EDIFICACIÓN RURAL (puntos) ─────────────────────────────────────────
+  map.addSource('edificacion', {
+    type: 'geojson',
+    data: BASE + 'Edificaci%C3%B3n_rural.geojson'
+  });
+  map.addLayer({
+    id: 'edificacion-circle',
+    type: 'circle',
+    source: 'edificacion',
+    paint: {
+      'circle-radius': ['interpolate', ['linear'], ['zoom'], 10, 3, 14, 6],
+      'circle-color': '#E07B54',
+      'circle-stroke-color': '#fff',
+      'circle-stroke-width': 1.5,
+      'circle-opacity': 0.85
+    }
+  });
+
+  // ── POPUPS ────────────────────────────────────────────────────────────────
+  // Geomorfología
+  map.on('click', 'geomorfologia-fill', e => {
+    const p = e.features[0].properties;
+    new mapboxgl.Popup({ offset: 8 })
+      .setLngLat(e.lngLat)
+      .setHTML(`<strong>Geomorfología</strong>
+        Unidad: <b>${p.UNIDAD || '—'}</b><br>
+        Superficie: ${p.SUPERFICIE ? p.SUPERFICIE.toLocaleString('es-CL') + ' m²' : '—'}`)
+      .addTo(map);
+  });
+
+  // Red Hidrográfica
+  map.on('click', 'hidrografia-line', e => {
+    const p = e.features[0].properties;
+    new mapboxgl.Popup({ offset: 8 })
+      .setLngLat(e.lngLat)
+      .setHTML(`<strong>Red Hidrográfica</strong>
+        Nombre: <b>${p.Nombre || '—'}</b><br>
+        Tipo: ${p.Dren_Tipo || '—'}`)
+      .addTo(map);
+  });
+
+  // Ejes Viales
+  map.on('click', 'vial-line', e => {
+    const p = e.features[0].properties;
+    new mapboxgl.Popup({ offset: 8 })
+      .setLngLat(e.lngLat)
+      .setHTML(`<strong>Eje Vial</strong>
+        Nombre: <b>${p.NOMBRE || '—'}</b><br>
+        Alias: ${p.ALIAS || '—'}<br>
+        ROL: ${p.ROL || '—'}`)
+      .addTo(map);
+  });
+
+  // Edificación Rural
+  map.on('click', 'edificacion-circle', e => {
+    const p = e.features[0].properties;
+    new mapboxgl.Popup({ offset: 8 })
+      .setLngLat(e.lngLat)
+      .setHTML(`<strong>Edificación Rural</strong>
+        Uso: <b>${p.USO_EDIFIC || '—'}</b><br>
+        Comuna: ${p.N_COMUNA || '—'}`)
+      .addTo(map);
+  });
+
+  // Cursor pointer al pasar sobre capas interactivas
+  ['geomorfologia-fill','hidrografia-line','vial-line','edificacion-circle'].forEach(id => {
+    map.on('mouseenter', id, () => map.getCanvas().style.cursor = 'pointer');
+    map.on('mouseleave', id, () => map.getCanvas().style.cursor = '');
+  });
+});
+
+// ── TOGGLE DE CAPAS ────────────────────────────────────────────────────────
+const layerMap = {
+  geomorfologia: ['geomorfologia-fill','geomorfologia-line'],
+  hidrografia:   ['hidrografia-line'],
+  vial:          ['vial-line'],
+  edificacion:   ['edificacion-circle']
 };
-pts.forEach(p => {
-  L.circleMarker([p.lat,p.lng],{
-    radius:9,fillColor:cols[p.tipo],color:'#fff',
-    weight:2,opacity:1,fillOpacity:0.9
-  }).addTo(map)
-  .bindPopup(`<strong style="font-size:13px">${p.nombre}</strong><br><span style="font-size:11px;color:#666">${p.desc}</span>`);
+const layerColors = {
+  geomorfologia: '#C8A850',
+  hidrografia:   '#1B4D6B',
+  vial:          '#1A3D2B',
+  edificacion:   '#E07B54'
+};
+
+function toggleLayer(btn) {
+  const key = btn.dataset.layer;
+  const layers = layerMap[key];
+  const isActive = btn.classList.contains('active');
+  layers.forEach(id => {
+    if (map.getLayer(id)) map.setLayoutProperty(id, 'visibility', isActive ? 'none' : 'visible');
+  });
+  if (isActive) {
+    btn.classList.remove('active');
+    btn.style.background = '#fff';
+    btn.style.color = 'var(--muted)';
+  } else {
+    btn.classList.add('active');
+    btn.style.background = layerColors[key];
+    btn.style.color = '#fff';
+  }
+}
+
+// Aplicar color inicial a botones activos
+document.querySelectorAll('.layer-btn.active').forEach(btn => {
+  btn.style.background = layerColors[btn.dataset.layer];
+  btn.style.color = '#fff';
 });
 </script>
 </body>
